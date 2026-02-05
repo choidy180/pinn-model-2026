@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react"; // Suspense 추가
 import InventoryStatusPanel from "@/components/panel/inventory-status-panel";
 import styled, { keyframes } from "styled-components";
 import AutoLoadingOverlay from "@/components/common/auto-loading-overlay";
@@ -15,7 +15,7 @@ const AssemblyLineHome = () => {
 
   return (
     <Container>
-      <AutoLoadingOverlay/>
+      <AutoLoadingOverlay />
       <Wrapper>
         {/* 1. 배경 비디오 */}
         <VideoElement
@@ -25,17 +25,20 @@ const AssemblyLineHome = () => {
           playsInline
           onCanPlayThrough={handleVideoLoadComplete}
         >
-          {/* 실제 비디오 경로로 수정 필요 */}
           <source src="/videos/20251029_152120_162126.mp4" type="video/mp4" />
         </VideoElement>
 
-        {/* 2. 로딩 전까지 보여줄 스켈레톤 (비디오 로딩 완료 시 제거) */}
+        {/* 2. 로딩 전까지 보여줄 스켈레톤 */}
         {!isVideoLoaded && <AbsoluteSkeletonUI />}
       </Wrapper>
-      <InventoryStatusPanel type={"assembly"}/>
+
+      {/* ✅ 에러 해결 핵심: useSearchParams를 사용하는 컴포넌트를 Suspense로 감싸기 */}
+      <Suspense fallback={<PanelFallback />}>
+        <InventoryStatusPanel type={"assembly"} />
+      </Suspense>
     </Container>
-  )
-}
+  );
+};
 
 export default AssemblyLineHome;
 
@@ -51,21 +54,21 @@ const Container = styled.div`
   padding: 30px;
   color: white;
   gap: 30px;
-`
+  /* 네비게이션 바 높이만큼 여백이 필요한 경우 추가 */
+  /* padding-top: 98px; */
+`;
 
 const Wrapper = styled.div`
   width: 100%;
   height: 100%;
-  position: relative; /* 자식 요소 absolute 배치의 기준 */
-
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  
   overflow: hidden;
   border-radius: 12px;
   background-color: #051328;
-`
+`;
 
 const VideoElement = styled.video`
   width: 100%;
@@ -77,22 +80,28 @@ const VideoElement = styled.video`
   z-index: 1;
 `;
 
-// ✅ 스켈레톤 애니메이션
 const skeletonPulse = keyframes`
   0% { background-color: #1b2940; }
   50% { background-color: #2a3b55; }
   100% { background-color: #1b2940; }
 `;
 
-// ✅ 기존 SkeletonUI에 위치 속성(absolute) 추가
 const AbsoluteSkeletonUI = styled.div`
   width: 100%;
   height: 100%;
   animation: ${skeletonPulse} 1.5s infinite ease-in-out;
   border-radius: 12px;
-  
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 2; /* 비디오보다 위에 위치 */
+  z-index: 2;
+`;
+
+// 패널이 로딩 중일 때 보여줄 임시 UI
+const PanelFallback = styled.div`
+  width: 400px; /* 기존 패널 너비에 맞게 조절 */
+  height: 100%;
+  background: rgba(5, 19, 40, 0.5);
+  border-radius: 12px;
+  animation: ${skeletonPulse} 1.5s infinite ease-in-out;
 `;

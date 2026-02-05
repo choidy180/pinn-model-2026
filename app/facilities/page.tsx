@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react"; // Suspense 추가
 import AutoLoadingOverlay from "@/components/common/auto-loading-overlay";
 import InventoryStatusPanel from "@/components/panel/inventory-status-panel";
 import styled, { keyframes } from "styled-components";
@@ -31,13 +31,15 @@ const Facilities = () => {
           $isLoading={isLoading}
           onLoadedData={handleLoadedData}
         >
-          {/* ⚠️ 실제 사용할 동영상 경로로 변경해주세요 */}
           <source src="/videos/[SHANA]01(192.168.220.101)_20251107_112537_115536.mp4" type="video/mp4" />
           비디오를 재생할 수 없습니다.
         </VideoElement>
       </VideoWrapper>
 
-      <InventoryStatusPanel type="facilities-type" />
+      {/* ✅ useSearchParams 에러 해결을 위한 Suspense 적용 */}
+      <Suspense fallback={<PanelFallback />}>
+        <InventoryStatusPanel type="facilities-type" />
+      </Suspense>
     </Container>
   );
 };
@@ -54,30 +56,23 @@ const Container = styled.div`
   align-items: center;
   padding: 30px;
   gap: 30px;
-  
   color: white;
 `;
 
 const VideoWrapper = styled.div`
   width: 100%;
   height: 100%;
-  position: relative; /* 스켈레톤(absolute) 배치를 위해 필수 */
+  position: relative;
   border-radius: 6px;
   overflow: hidden;
-  background-color: #000; /* 로딩 전 배경 */
+  background-color: #000;
 `;
 
-// 스켈레톤 애니메이션
 const shimmer = keyframes`
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 `;
 
-// 스켈레톤 UI
 const SkeletonFrame = styled.div`
   position: absolute;
   top: 0;
@@ -85,7 +80,6 @@ const SkeletonFrame = styled.div`
   width: 100%;
   height: 100%;
   z-index: 10;
-  
   background: linear-gradient(
     90deg,
     #172641 25%,
@@ -96,14 +90,26 @@ const SkeletonFrame = styled.div`
   animation: ${shimmer} 1.5s infinite;
 `;
 
-// 비디오 태그
 const VideoElement = styled.video<{ $isLoading?: boolean }>`
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  
-  /* 로딩 완료 전까지 숨김 처리 (자연스러운 전환을 위해 opacity 사용) */
   opacity: ${({ $isLoading }) => ($isLoading ? 0 : 1)};
   transition: opacity 0.3s ease-in;
+`;
+
+// ✅ 패널 로딩 중에 보여줄 Fallback 스타일
+const PanelFallback = styled.div`
+  width: 450px; /* InventoryStatusPanel의 기본 너비에 맞춰 조정 */
+  height: 100%;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #172641 25%,
+    #2a3e5c 50%,
+    #172641 75%
+  );
+  background-size: 200% 100%;
+  animation: ${shimmer} 1.5s infinite;
 `;
