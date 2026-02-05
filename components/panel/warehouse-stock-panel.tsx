@@ -144,7 +144,6 @@ const Tr = styled.tr`
 
 const WarehouseStockPanel: React.FC = () => {
   const stockData = MOCK_STOCK_SUMMARIES as StockSummary[];
-  const historyData = MOCK_STOCK_HISTORY as StockHistory[];
 
   return (
     <PanelWrapper>
