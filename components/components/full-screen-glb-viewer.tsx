@@ -56,9 +56,29 @@ const ROTATION_Y = Math.PI + 0.3;
 const MODEL_SCALE_DEFAULT = 11;   
 
 const DEMO_ERROR_DATA: Record<string, { cause: string, solution: string }> = {
-  "DRY ZONE UNIT": { cause: "내부 히터 코일 과부하로 인한 열효율 급감 감지 (Efficiency Drop)", solution: "2번 가열 모듈 전원 차단 후 온도 센서 재설정 및 코일 교체 요망" },
-  "MAIN ASSEMBLY": { cause: "서보 모터 X축 동기화 타이밍 오차 발생 (Sync Error: 0.04ms)", solution: "긴급 정지 후 메인 축 캘리브레이션(Calibration) 프로세스 재가동" },
-  "DEFAULT": { cause: "데이터 통신 패킷 손실 및 응답 지연 (Timeout)", solution: "네트워크 모듈 리셋 후 중앙 제어 장치 재연결 시도" }
+  // 1. 기존 에러 (그대로 유지): 가열/건조 관련 열효율 문제
+  "DRY ZONE UNIT": { 
+    cause: "내부 히터 코일 과부하로 인한 열효율 급감 감지 (Efficiency Drop)", 
+    solution: "2번 가열 모듈 전원 차단 후 온도 센서 재설정 및 코일 교체 요망" 
+  },
+
+  // 2. 수정된 에러: 사출 성형기 관련 압력 및 기계적 결함 (현실적인 공장 시나리오)
+  // 모델의 info.title을 "INJECTION SYSTEM" 또는 "MAIN ASSEMBLY"로 설정할 때 매칭됩니다.
+  "INJECTION SYSTEM": { 
+    cause: "사출 보압 공정 중 스크류 역류 및 유압 펌프 압력 저하 (Backflow & Pressure Loss)", 
+    solution: "스크류 체크 링(Check Ring) 마모 점검 및 유압 솔레노이드 밸브 교체 필요" 
+  },
+
+  // (혹시 기존 모델명인 'MAIN ASSEMBLY'를 그대로 쓰실 경우를 대비해 동일한 내용을 매핑해둡니다)
+  "MAIN ASSEMBLY": { 
+    cause: "사출 보압 공정 중 스크류 역류 및 유압 펌프 압력 저하 (Backflow & Pressure Loss)", 
+    solution: "스크류 체크 링(Check Ring) 마모 점검 및 유압 솔레노이드 밸브 교체 필요" 
+  },
+
+  "DEFAULT": { 
+    cause: "데이터 통신 패킷 손실 및 응답 지연 (Timeout)", 
+    solution: "네트워크 모듈 리셋 후 중앙 제어 장치 재연결 시도" 
+  }
 };
 
 // =================================================================
@@ -282,14 +302,46 @@ const Tooltip = styled.div<{ $show: boolean }>`
   opacity: ${props => (props.$show ? 1 : 0)}; transition: opacity 0.2s ease; z-index: 1001;
   span { display: block; &.title { color: #ff003c; font-weight: bold; font-size: 16px; } &.desc { color: #ffffff; font-size: 14px; } }
 `;
+// 🚨 [수정] CyberButton: 평소에는 투명 + 낮은 투명도(Ghost), 호버 시 활성화
 const CyberButton = styled.button<{ $active?: boolean }>`
-  background: ${props => props.$active ? 'rgba(255, 0, 60, 0.2)' : 'rgba(0, 0, 0, 0.6)'};
-  border: 1px solid ${props => props.$active ? '#ff003c' : '#444'}; color: ${props => props.$active ? '#ff003c' : '#ccc'};
-  font-family: 'Segoe UI', sans-serif; font-size: 18px; font-weight: bold; padding: 10px 24px; cursor: pointer;
+  /* 기본 상태: 배경/테두리 투명, 텍스트 매우 흐림 */
+  background: ${props => props.$active ? 'rgba(255, 0, 60, 0.1)' : 'transparent'};
+  border: 1px solid ${props => props.$active ? 'rgba(255, 0, 60, 0.3)' : 'transparent'};
+  color: ${props => props.$active ? '#ff003c' : 'rgba(255, 255, 255, 0.15)'}; /* 평소엔 아주 희미한 흰색 */
+  
+  font-family: 'Segoe UI', sans-serif; 
+  font-size: 14px; /* 크기도 살짝 줄임 */
+  font-weight: 600; 
+  padding: 8px 16px; 
+  cursor: pointer;
+  
+  /* 부드러운 전환 효과 */
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  
+  /* 형태 유지 */
   clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-  display: flex; align-items: center; gap: 8px; pointer-events: auto;
-  &:hover { background: rgba(255, 0, 60, 0.2); border-color: #ff003c; color: #ff003c; }
-  svg { width: 16px; height: 16px; }
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  pointer-events: auto;
+
+  /* SVG 아이콘도 흐리게 */
+  svg { 
+    width: 16px; 
+    height: 16px; 
+    opacity: ${props => props.$active ? 0.8 : 0.3}; 
+    transition: opacity 0.3s;
+  }
+
+  /* 🖱️ 호버 시: 원래 UI 스타일로 복귀 (잘 보이게) */
+  &:hover {
+    background: rgba(10, 12, 16, 0.8); /* 어두운 배경 생성 */
+    border-color: ${props => props.$active ? '#ff003c' : 'rgba(255, 255, 255, 0.3)'};
+    color: ${props => props.$active ? '#ff003c' : '#fff'};
+    transform: translateY(-2px); /* 살짝 떠오르는 느낌 */
+    
+    svg { opacity: 1; }
+  }
 `;
 
 // =================================================================
@@ -432,7 +484,7 @@ const FullScreenGlbViewer: React.FC<ViewerProps> = ({ models, portalRef }) => {
   const initialCameraState = useRef<{ position: THREE.Vector3, target: THREE.Vector3, distance: number } | null>(null);
   
   const [isGlobalActive, setIsGlobalActive] = useState(false);
-  const [isFixMode, setIsFixMode] = useState(true); 
+  const [isFixMode, setIsFixMode] = useState(false); 
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null); 
   const [hoveredWarningIndex, setHoveredWarningIndex] = useState<number | null>(null);
   

@@ -47,15 +47,15 @@ export default PackingHome;
 
 const Container = styled.div`
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 64px);
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 30px;
-  padding-top: 70px; /* 헤더 높이 */
   color: white;
   padding: 30px;
   box-sizing: border-box;
+  margin-top: 64px;
 `;
 
 const Wrapper = styled.div`

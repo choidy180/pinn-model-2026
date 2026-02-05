@@ -21,6 +21,7 @@ export const Panel = styled.section`
   height: ${PANEL_HEIGHT}px;
   padding: 12px 14px;
   box-sizing: border-box;
+  margin-top: 60px;
 
   /* ✨ [수정] 배경: 아주 어두운 네이비지만 투명도를 주어 뒤가 비치게 함 */
   background: rgba(13, 17, 30, 0.75);

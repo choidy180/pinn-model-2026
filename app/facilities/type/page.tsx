@@ -1,26 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react"; // ✅ Suspense import
 import styled from "styled-components";
 
 // ✅ 컴포넌트 import
 import AutoLoadingOverlay from "@/components/common/auto-loading-overlay";
 import FacilitiesDashboard from "@/components/facilities-dashboard";
-import VpnGuard from "@/components/vpn-guard";
 
 const FacilitiesTypeA = () => {
   return (
-    // ✅ 1. VPN 보안 가드가 최상위에서 감싸도록 수정
-    // (VPN이 연결되지 않으면 내부의 Dashboard나 Overlay는 렌더링되지 않음)
-    <VpnGuard>
-      <Container>
-        {/* 로딩 오버레이 (필요시 유지) */}
+    <Container>
+      {/* ✅ useSearchParams 에러 해결을 위해 Suspense로 감싸줍니다. */}
+      {/* fallback에는 로딩 중에 보여줄 간단한 UI를 넣거나 null을 넣습니다. */}
+      <Suspense fallback={<div style={{ color: "white" }}>Loading...</div>}>
         <AutoLoadingOverlay />
-        
-        {/* 메인 대시보드 (CCTV + API 데이터 패널) */}
         <FacilitiesDashboard />
-      </Container>
-    </VpnGuard>
+      </Suspense>
+    </Container>
   );
 };
 
@@ -32,7 +28,7 @@ const Container = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #051328; /* 배경색을 Dashboard와 맞춰주면 더 자연스럽습니다 */
+  background-color: #051328;
   color: white;
-  overflow: hidden; /* 스크롤 방지 */
+  overflow: hidden;
 `;

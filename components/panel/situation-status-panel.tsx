@@ -21,7 +21,7 @@ export default SituationStatusPanel;
 
 const Wrapper = styled.section`
   width: 100%;
-  max-width: 25vw; /* 기존 레이아웃 유지 */
+  max-width: 30vw; /* 기존 레이아웃 유지 */
   height: 100%;
   padding: 20px;
   border-radius: 10px;

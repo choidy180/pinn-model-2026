@@ -50,7 +50,7 @@ const flashAnimation = keyframes`
 const Container = styled.div`
   width: 100vw; height: 100vh; background-color: #0b0d14; color: #f8fafc;
   font-family: 'Pretendard', sans-serif; overflow: hidden; display: flex; 
-  flex-direction: column; padding: 20px; box-sizing: border-box; gap: 20px;
+  flex-direction: column; padding: 20px; box-sizing: border-box; gap: 20px; padding-top: 94px;
 `;
 
 const MainContent = styled.div` flex: 1; display: flex; gap: 24px; min-height: 0; `;
@@ -113,7 +113,6 @@ const SectionTitle = styled.h3<{ $color?: string }>`
   color: ${props => props.$color || '#fff'}; svg { width: 34px; height: 34px; }
 `;
 
-// 이미지 수직 중앙 정렬
 const ContentFlex = styled.div` 
   display: flex; gap: 24px; flex: 1; align-items: center; height: 100%;
 `;
@@ -121,7 +120,7 @@ const ContentFlex = styled.div`
 const TextContent = styled.div` 
   flex: 1; font-size: 22px; line-height: 1.7; color: #e2e8f0; font-weight: 600; 
   ul { padding-left: 0; list-style: none; margin: 0; } 
-  li { margin-bottom: 12px; position: relative; padding-left: 28px; &::before { content: '•'; position: absolute; left: 0; color: #64748b; font-size: 28px; top: -5px; } }
+  li { margin-bottom: 12px; position: relative; padding-left: 28px; transition: all 0.5s ease; &::before { content: '•'; position: absolute; left: 0; color: #64748b; font-size: 28px; top: -5px; } }
 `;
 
 const ImagePreview = styled.div` 
@@ -151,7 +150,10 @@ const SubtitleOverlay = styled(motion.div)`
   position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%) !important;
   background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px); padding: 30px 80px; 
   border-radius: 24px; border: 2px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; z-index: 30;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); min-width: 400px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); 
+  
+  /* [수정 2] 타이핑 박스 너비 확대 (400px -> 900px) */
+  min-width: 900px;
 `;
 const TypewriterText = styled.span` font-size: 42px; font-weight: 900; color: #ffffff; letter-spacing: 2px; font-family: 'Pretendard', sans-serif; text-shadow: 0 4px 10px rgba(0,0,0,0.5); &::after { content: '|'; display: inline-block; margin-left: 8px; color: #3b82f6; animation: ${blinkCursor} 1s infinite; }`;
 
@@ -227,7 +229,8 @@ const STEPS = [
   { id: 5, label: '공정 확인', key: 'PROCESS', icon: <Settings /> },
   { id: 6, label: '불량내용 분석', key: 'DEFECT', icon: <AlertCircle /> },
   { id: 7, label: '조치내용 입력', key: 'ACTION', icon: <Wrench /> },
-  { id: 8, label: '조치 완료', key: 'COMPLETE', icon: <FileCheck /> },
+  { id: 8, label: '소요시간 측정', key: 'TIME LOG', icon: <Clock /> },
+  { id: 9, label: '조치 완료', key: 'COMPLETE', icon: <FileCheck /> },
 ];
 
 const HighVisDashboard = () => {
@@ -245,24 +248,32 @@ const HighVisDashboard = () => {
   
   const [outletConfirmed, setOutletConfirmed] = useState(false);
   const [processConfirmed, setProcessConfirmed] = useState(false);
+  
+  const [actionConfirmed, setActionConfirmed] = useState(false);
 
   const [isFlash, setIsFlash] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  // [수정 1] 이미지 상태 분리
+  const [capturedImage, setCapturedImage] = useState<string | null>(null); // 불량 내용 이미지
+  const [actionImage, setActionImage] = useState<string | null>(null); // 조치 내용 이미지
 
   // Modal States
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
 
-  const CAPTURE_IMAGE_URL = "https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?q=80&w=400&auto=format&fit=crop";
+  const CAPTURE_IMAGE_URL = "/exam_images0.png";
+  const CAPTURE_IMAGE_URL2 = "/exam_images1.png";
 
   const resetDashboard = () => {
-    setCurrentStep(0); // [MODIFIED] Reset to Step 0 (Ready)
+    setCurrentStep(0);
     setReportDate(""); setReportTime(""); 
     setWriterConfirmed(false); setWriterName(""); 
     setScanConfirmed(false); 
     setOutletConfirmed(false); setProcessConfirmed(false);
+    setActionConfirmed(false);
     setCapturedImage(null);
+    setActionImage(null); // [수정] 조치 이미지 초기화
     setTypedText("");
   };
 
@@ -275,10 +286,11 @@ const HighVisDashboard = () => {
       setWriterConfirmed(false); setWriterName(""); 
       setScanConfirmed(false); 
       setOutletConfirmed(false); setProcessConfirmed(false);
+      setActionConfirmed(false);
       setCapturedImage(null);
+      setActionImage(null); // [수정] 조치 이미지 초기화
     } else {
-        // [MODIFIED] Connect -> Go to Step 0
-        setCurrentStep(0);
+       setCurrentStep(0);
     }
   };
 
@@ -296,7 +308,7 @@ const HighVisDashboard = () => {
         if (idx === fullText.length) clearInterval(timer);
       }, 120);
       return () => clearInterval(timer);
-    } else if (currentStep !== 2 && currentStep !== 4) { 
+    } else if (currentStep !== 2 && currentStep !== 4 && currentStep !== 7) { 
       setTypedText("");
     }
   }, [currentStep]);
@@ -312,7 +324,7 @@ const HighVisDashboard = () => {
     }
   }, [currentStep, scanConfirmed]);
 
-  // Step 6 Capture Simulation
+  // Step 6 Capture Simulation (Defect Image)
   useEffect(() => {
     if (currentStep === 6 && !capturedImage) {
       setIsFlash(true);
@@ -321,11 +333,20 @@ const HighVisDashboard = () => {
     }
   }, [currentStep, capturedImage]);
 
+  // [추가] Step 7 Capture Simulation (Action Image)
+  useEffect(() => {
+    if (currentStep === 7 && !actionImage) {
+      setIsFlash(true);
+      setTimeout(() => setIsFlash(false), 200);
+      setActionImage(CAPTURE_IMAGE_URL2);
+    }
+  }, [currentStep, actionImage]);
+
   // Key Event
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') {
-        if (currentStep === 8) {
+        if (currentStep === 9) { 
           setShowCompletionModal(true);
           setTimeout(() => {
             setShowCompletionModal(false);
@@ -347,7 +368,7 @@ const HighVisDashboard = () => {
             if (idx === name.length) {
               clearInterval(timer);
               setTimeout(() => {
-                setWriterName("장호승 / 제조2팀");
+                setWriterName("장호성 / 제조2팀");
                 setWriterConfirmed(true);
                 setTypedText(""); 
               }, 1500);
@@ -387,6 +408,24 @@ const HighVisDashboard = () => {
           }, 120);
           return;
         }
+
+        // Step 7: 조치 내용 입력 로직
+        if (currentStep === 7 && !actionConfirmed) {
+            const actionText = "규정 토크렌치를 사용하여 수동 재체결 진행함...";
+            let idx = 0; setTypedText("");
+            const timer = setInterval(() => {
+                setTypedText(actionText.slice(0, idx + 1));
+                idx++;
+                if (idx === actionText.length) {
+                    clearInterval(timer);
+                    setTimeout(() => {
+                        setActionConfirmed(true);
+                        setTypedText("");
+                    }, 1000);
+                }
+            }, 50); 
+            return;
+        }
         
         setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
       }
@@ -394,7 +433,7 @@ const HighVisDashboard = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, writerConfirmed, outletConfirmed]); 
+  }, [currentStep, writerConfirmed, outletConfirmed, actionConfirmed]); 
 
   const getStatus = (idx: number) => {
     if (idx < currentStep) return 'completed';
@@ -523,7 +562,7 @@ const HighVisDashboard = () => {
                       <InfoCard {...cardAnim}><h4>모델</h4><p>Drum Tub Asm</p></InfoCard>
                     </div>
                     <div style={{ height:'100%' }}>
-                      <InfoCard {...cardAnim}><h4>S/N</h4><p>AJQ74873897KSD</p></InfoCard>
+                      <InfoCard {...cardAnim}><h4>S/N</h4><p>AJQ74873878KSD6250670</p></InfoCard>
                     </div>
                   </>
                 ) : (
@@ -547,7 +586,7 @@ const HighVisDashboard = () => {
                 </div>
             </GridRow>
 
-            {/* Section 1: 불량 내용 */}
+            {/* Section 1: 불량 내용 (capturedImage 사용) */}
             <SectionWrapper>
               {currentStep >= 6 ? (
                 <SectionCard {...cardAnim} $active={currentStep === 6} $completed={currentStep > 6}>
@@ -555,7 +594,6 @@ const HighVisDashboard = () => {
                   <ContentFlex>
                     <TextContent>
                       <ul>
-                        <li>S/N 스캔 결과 반복 불량으로 확인됨.</li>
                         <li>42번 공정 로터볼트 자동 체결 설비의 유압 문제로 체결 토크값 부족 알람 발생.</li>
                       </ul>
                     </TextContent>
@@ -569,21 +607,36 @@ const HighVisDashboard = () => {
               )}
             </SectionWrapper>
 
-            {/* Section 2: 조치 내용 */}
+            {/* Section 2: 조치 내용 (actionImage 사용) */}
             <SectionWrapper>
               {currentStep >= 7 ? (
-                <SectionCard {...cardAnim} $active={currentStep === 7} $completed={currentStep > 7}>
+                <SectionCard {...cardAnim} $active={currentStep === 7 || currentStep === 8} $completed={currentStep > 8}>
                   <SectionTitle $color="#10b981"><Wrench /> 조치 내용</SectionTitle>
                   <ContentFlex>
                     <TextContent>
                       <ul>
-                        <li>규정 토크렌치를 사용하여 수동 재체결 진행함 (450Nm).</li>
-                        <li>체결 후 유격 확인 및 정상 가동 테스트 완료.</li>
-                        <li>조치 완료까지 3분 소요.</li>
+                        {/* Step 7에서 텍스트가 입력되었거나 완료되면 표시 */}
+                        {(actionConfirmed || currentStep > 7) && (
+                            <>
+                                <li>규정 토크렌치를 사용하여 수동 재체결 진행함 (450~550Nm).</li>
+                                <li>체결 후 유격 확인 및 정상 가동 테스트 완료</li>
+                            </>
+                        )}
+                        {/* Step 8이 되면 소요시간 텍스트가 밝게 표시됨 */}
+                        <li style={{ 
+                            marginTop: '16px',
+                            color: currentStep >= 8 ? '#facc15' : '#475569', 
+                            opacity: currentStep >= 8 ? 1 : 0.3,
+                            fontWeight: currentStep >= 8 ? 900 : 500,
+                            transition: 'all 0.5s ease'
+                        }}>
+                          조치 완료까지 3분 소요.
+                        </li>
                       </ul>
                     </TextContent>
                     <ImagePreview>
-                        {capturedImage ? <CapturedImage src={capturedImage} style={{filter:'grayscale(100%)'}} alt="Action" /> : null}
+                        {/* [수정] actionImage 사용 및 흑백 필터 */}
+                        {actionImage ? <CapturedImage src={actionImage} style={{filter:'grayscale(100%)'}} alt="Action" /> : null}
                     </ImagePreview>
                   </ContentFlex>
                 </SectionCard>
@@ -606,7 +659,7 @@ const HighVisDashboard = () => {
                 <span className="value">{step.label}</span>
               </StepText>
               {status === 'completed' && <Check size={28} color="#10b981" style={{marginLeft:'auto'}}/>}
-              {status === 'active' && <Activity size={28} color="#3b82f6" className={idx === 1 || (idx === 2 && !writerConfirmed && currentStep === 2) || (idx === 4 && (!outletConfirmed || !processConfirmed) && currentStep === 4) ? "animate-pulse" : "animate-spin"} style={{marginLeft:'auto'}}/>}
+              {status === 'active' && <Activity size={28} color="#3b82f6" className={idx === 1 || (idx === 2 && !writerConfirmed && currentStep === 2) || (idx === 4 && (!outletConfirmed || !processConfirmed) && currentStep === 4) || (idx === 7 && !actionConfirmed && currentStep === 7) ? "animate-pulse" : "animate-spin"} style={{marginLeft:'auto'}}/>}
             </StepItem>
           )
         })}

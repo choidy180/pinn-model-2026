@@ -48,20 +48,15 @@ const NavBar = () => {
             </MenuItem>
 
             <MenuItem $active={activeIndex === 2}>
-              <button onClick={() => router.push('/dryer?selected')}>건조실</button>
-              {/* 서브메뉴 예시 (필요시 사용) */}
-              <SubMenu>
-                <SubMenuItem onClick={() => router.push('/dryer/1')}>건조실 A</SubMenuItem>
-                <SubMenuItem onClick={() => router.push('/dryer/2')}>건조실 B</SubMenuItem>
-              </SubMenu>
+              <button onClick={() => router.push('/dryer')}>건조공정</button>
             </MenuItem>
 
             <MenuItem $active={activeIndex === 3}>
-              <button onClick={() => router.push('/packing')}>패킹</button>
+              <button onClick={() => router.push('/packing')}>사상공정</button>
             </MenuItem>
 
             <MenuItem $active={activeIndex === 4}>
-              <button onClick={() => router.push('/assembly')}>조립라인</button>
+              <button onClick={() => router.push('/evolution-dashboard')}>데이터현황</button>
             </MenuItem>
 
             <MenuItem $active={activeIndex === 5}>

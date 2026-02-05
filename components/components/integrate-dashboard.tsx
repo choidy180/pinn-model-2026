@@ -8,7 +8,7 @@ import CctvPlayer from "../cctv-player";
 
 const DashboardContainer = styled.div`
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 64px);
   background-color: #0b1221; /* 이미지의 Deep Dark Navy 배경 */
   color: #ffffff;
   font-family: "Pretendard", "Malgun Gothic", sans-serif;
@@ -17,6 +17,7 @@ const DashboardContainer = styled.div`
   gap: 20px;     /* 좌우 섹션 간격 */
   box-sizing: border-box;
   overflow: hidden;
+  padding-top: 64px;
 `;
 
 // ───────────────────── 좌측: 자재 재고 & CCTV ─────────────────────
@@ -39,7 +40,7 @@ const HeaderRow = styled.div`
 `;
 
 const Title = styled.h2`
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 700;
   color: #e2e8f0;
   margin: 0;
@@ -63,7 +64,7 @@ const StockBadge = styled.div<{ $bg: string }>`
   /* 좌측 라벨 (ABS, PP...) */
   .label {
     color: #ffffff;
-    font-size: 2rem;
+    font-size: 1.6rem;
     font-weight: 800;
     padding: 0 16px;
     display: flex;
@@ -266,16 +267,16 @@ const InfoItem = styled.div<{ $align?: string; $statusType?: string }>`
 // ───────────────────── 데이터 (수정됨) ─────────────────────
 
 const DRYER_DATA = [
-  { id: 1, name: "#01 건조기", material: "PC+ABS", setTemp: 100, curTemp: 100, status: "normal" },
-  { id: 2, name: "#02 건조기", material: "TPE", setTemp: 75, curTemp: 75, status: "normal" },
+  { id: 1, name: "#01 건조기", material: "PC+ABS", setTemp: 100, curTemp: 98.7, status: "normal" },
+  { id: 2, name: "#02 건조기", material: "TPE", setTemp: 75, curTemp: 75.8, status: "normal" },
   // 기존 danger를 warning으로 변경
-  { id: 3, name: "#03 건조기", material: "ABS", setTemp: 80, curTemp: 85, status: "warning" },
-  { id: 4, name: "#04 건조기", material: "PMMA", setTemp: 75, curTemp: 75, status: "normal" },
+  { id: 3, name: "#03 건조기", material: "ABS", setTemp: 80, curTemp: 85.3, status: "warning" },
+  { id: 4, name: "#04 건조기", material: "PMMA", setTemp: 75, curTemp: 75.1, status: "normal" },
   // 기존 normal을 danger로 변경 (예시)
-  { id: 5, name: "#05 건조기", material: "PC+ABS", setTemp: 100, curTemp: 115, status: "danger" },
-  { id: 6, name: "#06 건조기", material: "ABS", setTemp: 80, curTemp: 80, status: "normal" },
-  { id: 7, name: "#07 건조기", material: "복합 PP", setTemp: 75, curTemp: 75, status: "normal" },
-  { id: 8, name: "#08 건조기", material: "PC+ABS", setTemp: 100, curTemp: 100, status: "normal" },
+  { id: 5, name: "#05 건조기", material: "PC+ABS", setTemp: 100, curTemp: 97.1, status: "warning" },
+  { id: 6, name: "#06 건조기", material: "ABS", setTemp: 80, curTemp: 80.4, status: "normal" },
+  { id: 7, name: "#07 건조기", material: "복합 PP", setTemp: 75, curTemp: 75.0, status: "normal" },
+  { id: 8, name: "#08 건조기", material: "PC+ABS", setTemp: 100, curTemp: 101.2, status: "normal" },
 ];
 
 export default function PerfectDashboard() {

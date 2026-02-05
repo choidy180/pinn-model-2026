@@ -1,555 +1,423 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { motion, animate, useInView } from "framer-motion";
+import { FiDatabase, FiCpu, FiActivity, FiServer, FiLayers, FiZap } from "react-icons/fi";
 
-// --- 1. Global Styles ---
+// --- 1. Global Reset & Fonts ---
 const GlobalStyle = createGlobalStyle`
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background-color: #000000;
-    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
-    color: #ffffff;
+    background-color: #000;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: #f5f5f7;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 `;
 
-// --- 2. Data Configuration ---
-const MAIN_DATA = [
-  { id: 1, label: "현장 데이터", value: 10, display: 100, unit: "GB", type: "normal" },
-  { id: 2, label: "초거대 AI", value: 25, display: 3, unit: "TB", type: "accent" },
-  { id: 3, label: "PINN 모델", value: 85, display: 79, unit: "TB", target: 24, type: "hero" },
-  { id: 4, label: "기타 소스", value: 5, display: 50, unit: "GB", type: "normal" },
+// --- 2. Data Constants ---
+const BAR_DATA = [
+  // 12년 누적 데이터 수치 (1.0, 0.7, 0.6)
+  { id: 1, label: "ERP 데이터", value: 1.0, type: "existing", icon: <FiDatabase /> },
+  { id: 2, label: "MES 데이터", value: 0.7, type: "existing", icon: <FiCpu /> },
+  { id: 3, label: "PRAI 데이터", value: 0.6, type: "existing", icon: <FiActivity /> },
+  
+  { id: 4, label: "PoC 기업 데이터", value: 1.2, type: "poc", icon: <FiServer /> },
+  { id: 5, label: "PoC 공정 데이터", value: 2.5, type: "poc", icon: <FiLayers /> },
+  { id: 6, label: "PoC 액션 데이터", value: 75.3, type: "poc", isHero: true, icon: <FiZap /> },
 ];
 
-const PROCESS_DATA = [
-  {
-    id: 1,
-    name: "자재창고",
-    unit: "입고 정확도",
-    target: [20, 35, 45, 60, 70, 80],
-    actual: [20, 38, 55, 75, 88, 98],
-    currentScore: 98, 
-    goalScore: 80,    // 요청하신 수치로 변경 (98 - 80 = 18% 초과)
-    scoreUnit: "%",
-    color: "#2997ff", // Blue
-  },
-  {
-    id: 2,
-    name: "사출설비",
-    unit: "생산 효율성",
-    target: [30, 40, 50, 60, 75, 85],
-    actual: [32, 45, 65, 80, 92, 115],
-    currentScore: 115,
-    goalScore: 85,
-    scoreUnit: "%",
-    color: "#bf5af2", // Purple
-  },
-  {
-    id: 3,
-    name: "건조실",
-    unit: "온도 유지율",
-    target: [50, 55, 60, 65, 70, 75],
-    actual: [50, 58, 68, 80, 89, 94],
-    currentScore: 94,
-    goalScore: 84,    // 요청하신 수치로 변경 (94 - 84 = 10% 초과)
-    scoreUnit: "%",
-    color: "#ff9f0a", // Orange
-  },
-  {
-    id: 4,
-    name: "패킹공정",
-    unit: "시간당 처리량",
-    target: [20, 30, 40, 50, 60, 70],
-    actual: [22, 35, 55, 70, 85, 99],
-    currentScore: 99,
-    goalScore: 70,
-    scoreUnit: "ea",
-    color: "#30d158", // Green
-  },
+const TABLE_DATA = [
+  { category: "수집 방식", asIs: "생산 결과만 기록", toBe: "공정 전과정 수집" },
+  { category: "활용 방식", asIs: "단순 통계용", toBe: "Physical AI 학습데이터" },
+  { category: "저장 구조", asIs: "파편화된 원시데이터", toBe: "전처리 데이터 저장" },
 ];
 
-// --- 3. Helper Component: Real-time Counter ---
-interface CountUpProps {
-  from?: number;
-  to: number;
-  duration?: number;
-  delay?: number;
-  suffix?: string;
-}
+const GOAL = 24;
+const MAX_VAL = 75.3;
 
-function CountUp({ from = 0, to, duration = 2, delay = 0, suffix = "" }: CountUpProps) {
+// --- 3. Utilities ---
+const CountUp = ({ to, suffix = "", decimals = 1, duration = 2.5 }: any) => {
   const nodeRef = useRef<HTMLSpanElement>(null);
   const inView = useInView(nodeRef, { once: true });
-
   useEffect(() => {
     if (!inView) return;
-    
-    const node = nodeRef.current;
-    
-    const controls = animate(from, to, {
-      duration: duration,
-      delay: delay,
-      ease: [0.16, 1, 0.3, 1],
-      onUpdate(value) {
-        if (node) {
-          node.textContent = Math.round(value).toLocaleString() + suffix;
-        }
-      },
+    const controls = animate(0, to, { 
+      duration, 
+      ease: [0.25, 1, 0.5, 1],
+      onUpdate(v) { if (nodeRef.current) nodeRef.current.textContent = v.toFixed(decimals) + suffix; }
     });
-
     return () => controls.stop();
-  }, [from, to, duration, delay, inView, suffix]);
-
+  }, [to, inView, suffix, decimals, duration]);
   return <span ref={nodeRef} />;
-}
+};
 
-
-// --- 4. Styled Components ---
-
-const Container = styled.main`
-  position: relative;
+// --- 4. Layout Components ---
+const Container = styled.div`
   width: 100vw;
-  height: 100vh;
+  height: calc(100vh - 70px);
+  margin-top: 70px;
   display: flex;
   flex-direction: column;
-  background-color: #000;
-  padding: 4vh 5vw;
-  gap: 3vh;
+  background: radial-gradient(circle at 50% -20%, #1c1c1e 0%, #000 90%);
+  padding: 24px 32px;
+  gap: 20px;
 `;
 
-const AmbientLight = styled.div`
-  position: absolute;
-  width: 120vh;
-  height: 120vh;
-  background: radial-gradient(circle, rgba(41, 151, 255, 0.08) 0%, rgba(0, 0, 0, 0) 65%);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 0;
-`;
-
-// === TOP SECTION ===
-const TopSection = styled.section`
-  flex: 5;
-  display: grid;
-  grid-template-columns: 0.8fr 2.5fr;
-  align-items: center;
-  gap: 4vw;
-  z-index: 10;
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-  padding-bottom: 2vh;
-`;
-
-const TextGroup = styled.div`
+// --- Header ---
+const HeaderWrapper = styled(motion.div)`
   display: flex;
   flex-direction: column;
+  align-items: center; 
   justify-content: center;
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+  text-align: center;
 `;
 
-const MainTitle = styled(motion.h1)`
-  font-size: clamp(2.5rem, 3.5vw, 4rem);
-  font-weight: 800;
-  line-height: 1.1;
-  color: #fff;
-  margin-bottom: 1.5vh;
-  word-break: keep-all;
+const MainTitle = styled.h1`
+  font-size: 64px;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+`;
 
-  span {
-    background: linear-gradient(90deg, #4aacff, #d17aff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+const SubTitle = styled.div`
+  font-size: 32px;
+  font-weight: 600;
+  color: #a1a1a6;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  line-height: 1.2;
+  gap: 12px;
+  
+  strong {
+    font-size: 42px;
+    font-weight: 800;
+    color: #2997ff;
+    text-shadow: 0 0 20px rgba(41, 151, 255, 0.5);
   }
 `;
 
-const Description = styled(motion.p)`
-  font-size: clamp(1rem, 1.1vw, 1.25rem);
-  line-height: 1.6;
-  color: #e0e0e0;
-  max-width: 450px;
-  word-break: keep-all;
+// --- Main Grid ---
+const MainGrid = styled.div`
+  display: grid;
+  grid-template-rows: 1.5fr 1fr;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
 `;
 
-const BarChartContainer = styled.div`
+const BentoBox = styled(motion.div)`
+  background: #0D0D0D;
+  border: 1px solid #333;
+  border-radius: 20px;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: visible;
+`;
+
+// --- Top Section: Bar Charts ---
+const BarContainer = styled.div`
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 60px;
+  height: 100%;
+  align-items: center;
+`;
+
+const BarColumn = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2vh;
-  width: 100%;
   height: 100%;
+  gap: 24px;
+`;
+
+const ColumnHeader = styled.div<{ $color: string }>`
+  font-size: 24px;
+  font-weight: 700;
+  color: ${({ $color }) => $color};
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  &::before {
+    content: ''; width: 4px; height: 20px; background: ${({ $color }) => $color}; border-radius: 2px;
+  }
 `;
 
 const BarRow = styled.div`
   display: grid;
-  grid-template-columns: 100px 1fr 140px;
+  grid-template-columns: 200px 1fr 140px;
   align-items: center;
   gap: 20px;
-  width: 100%;
-  height: 6vh;
 `;
 
-const BarLabel = styled(motion.div)`
-  text-align: right;
-  color: #d1d1d6;
+const Label = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
   font-weight: 600;
-  font-size: 1.1rem;
+  color: #fff;
   white-space: nowrap;
+
+  svg { font-size: 24px; color: #ffffff; }
 `;
 
-const BarTrack = styled.div`
-  position: relative;
+const Track = styled.div`
   width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.08);
+  height: 40px;
+  background: #1C1C1E;
   border-radius: 8px;
+  overflow: hidden;
+  position: relative;
 `;
 
-const BarFill = styled(motion.div)<{ $type: string }>`
+const Fill = styled(motion.div)<{ $color: string; $isHero?: boolean }>`
   height: 100%;
+  background: ${({ $color }) => $color};
   border-radius: 8px;
-  background: ${({ $type }) => 
-    $type === "hero" ? "linear-gradient(90deg, #5e5ce6, #bf5af2)" : 
-    $type === "accent" ? "#0a84ff" : "#555"};
-  box-shadow: ${({ $type }) => $type === "hero" ? "0 0 25px rgba(191, 90, 242, 0.6)" : "none"};
+  filter: ${({ $isHero }) => $isHero ? 'brightness(1.1)' : 'none'};
 `;
 
-const BarValue = styled(motion.div)<{ $isHero: boolean }>`
-  text-align: left;
-  font-weight: 800;
-  color: #ffffff;
-  font-size: ${({ $isHero }) => ($isHero ? "3rem" : "2rem")};
-  text-shadow: 0 0 10px rgba(0,0,0,0.5);
-  padding-left: 10px;
-  display: flex; 
-  align-items: baseline;
+const Value = styled.span<{ $color: string; $isHero?: boolean }>`
+  font-size: ${({ $isHero }) => $isHero ? "36px" : "28px"};
+  font-weight: ${({ $isHero }) => $isHero ? 800 : 700};
+  color: ${({ $color }) => $color};
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 `;
 
-const TargetLineTop = styled(motion.div)`
+// --- Goal UI ---
+const GoalLineContainer = styled.div`
   position: absolute;
-  top: -20%; bottom: -20%;
-  width: 3px;
-  background-color: #ff3b30;
+  top: 40px;
+  bottom: 10px;
+  left: 0; right: 0;
+  pointer-events: none;
+`;
+
+const GoalLine = styled.div`
+  position: absolute;
+  top: 0; bottom: 0;
+  left: ${(GOAL / MAX_VAL) * 100}%;
+  width: 2px;
+  background: #FF453A;
   z-index: 5;
-  box-shadow: 0 0 15px rgba(255, 59, 48, 1);
+`;
+
+const GoalBadge = styled.div`
+  position: absolute;
+  top: -34px;
+  left: ${(GOAL / MAX_VAL) * 100}%;
+  transform: translateX(-50%);
+  background: #FF453A;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
   
   &::after {
-    content: ''; position: absolute; bottom: 0; left: -5px;
-    width: 13px; height: 13px; border-radius: 50%; background: #ff3b30;
-    box-shadow: 0 0 10px rgba(255, 59, 48, 1);
+    content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+    border-width: 5px 5px 0; border-style: solid; border-color: #FF453A transparent transparent transparent;
   }
 `;
 
-const TargetLabelTop = styled.div`
-  position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
-  background: #ff3b30;
-  color: #fff;
-  padding: 6px 12px; 
-  border-radius: 20px; 
-  font-weight: 800; 
-  font-size: 1rem;
-  white-space: nowrap;
-  box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4);
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-
-  &::before {
-    content: '';
-    position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid #ff3b30;
-  }
-`;
-
-
-// === BOTTOM SECTION ===
-const BottomSection = styled.section`
-  flex: 4;
+// --- Bottom Section ---
+const BottomGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5vw;
-  width: 100%;
-  min-height: 0;
-`;
-
-const Card = styled(motion.div)`
-  background: rgba(30, 30, 35, 0.7);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 16px;
-  padding: 2vh 1.5vw;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  height: 100%; 
-`;
-
-const CardHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5vh;
-`;
-
-const TitleGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const ProcessTitle = styled.h3`
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #ffffff;
-`;
-
-const ProcessUnit = styled.span`
-  font-size: 1.2rem;
-  color: #d1d1d6;
-`;
-
-const StatRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1vh;
-  margin-bottom: 1.5vh;
-`;
-
-const MainScoreWrapper = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-`;
-
-const MainScore = styled.div<{ $color: string }>`
-  font-size: 3rem;
-  font-weight: 800;
-  color: ${({ $color }) => $color};
-  line-height: 1;
-  text-shadow: 0 0 20px ${({ $color }) => $color}40;
-`;
-
-const DetailStatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  width: 100%;
-`;
-
-const DetailStatBox = styled.div`
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-`;
-
-const DetailLabel = styled.span`
-  font-size: 1.1rem;
-  color: #c7c7ca;
-`;
-
-const DetailValue = styled.span<{ $isPositive?: boolean }>`
-  font-size: 1.65rem;
-  font-weight: 700;
-  color: ${({ $isPositive }) => $isPositive ? "#30d158" : "#fff"};
-`;
-
-const GraphArea = styled.div`
-  flex-grow: 1;
-  width: 100%;
-  position: relative;
-  overflow: visible; 
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 12px;
-  display: flex;
-  align-items: flex-end;
-`;
-
-const StyledSVG = styled.svg`
-  width: 100%;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
   height: 100%;
-  overflow: visible;
 `;
 
-const getPath = (data: number[], width: number, height: number) => {
-  if (data.length === 0) return "";
-  const paddingY = height * 0.2; 
-  const usableHeight = height - 2 * paddingY;
-  const maxValue = 130; 
+const SectionTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 3px solid #fff;
+  line-height: 1;
+`;
 
-  const points = data.map((val, i) => [
-    (i / (data.length - 1)) * width,
-    height - paddingY - (val / maxValue) * usableHeight
-  ]);
+const TableHeader = styled.div`
+  display: grid;
+  grid-template-columns: 0.6fr 1fr 1fr;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 8px;
+  span { font-size: 20px; font-weight: 600; color: #ffffff; text-align: center; }
+  span:first-child { text-align: left; padding-left: 8px; }
+`;
 
-  return points.reduce((acc, point, i, a) => {
-    if (i === 0) return `M ${point[0]},${point[1]}`;
-    const cp1x = a[i - 1][0] + (point[0] - a[i - 1][0]) * 0.5;
-    const cp1y = a[i - 1][1];
-    const cp2x = point[0] - (point[0] - a[i - 1][0]) * 0.5;
-    const cp2y = point[1];
-    return `${acc} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${point[0]},${point[1]}`;
-  }, "");
-};
+const TableRow = styled(motion.div)`
+  display: grid;
+  grid-template-columns: 0.6fr 1fr 1fr;
+  padding: 16px 0;
+  border-bottom: 1px solid #222;
+  align-items: center;
+  
+  .cat { font-size: 20px; font-weight: 700; color: #fff; padding-left: 8px; }
+  .asis { font-size: 20px; font-weight: 500; color: #ffffff; text-align: center; }
+  .tobe { font-size: 20px; font-weight: 700; color: #2997ff; text-align: center; }
+`;
 
+// --- Elastic J-Curve Chart (Label Position Fixed) ---
+function RocketChart() {
+  const width = 800; const height = 200; const p = 10;
+  
+  const startX = p;
+  const endX = width - p;
+  const startY = height - p;
+  const endY = 40; 
 
-export default function RealTimeReportFinal() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return null;
+  // --- 12년 (점차적으로 올라가는 그래프) ---
+  const existingPath = `
+    M ${startX},${startY}
+    C ${width * 0.3},${height - 15} ${width * 0.6},${height - 25} ${endX},${height - 30}
+  `;
+
+  // --- PoC (바닥을 기다가 급등하는 그래프) ---
+  const climbStart = width * 0.85;
+  const rocketPath = `
+    M ${startX},${startY} 
+    L ${climbStart},${startY}
+    C ${width * 0.92},${startY} ${width * 0.96},${endY + 40} ${endX},${endY}
+  `;
 
   return (
-    <>
-      <GlobalStyle />
-      <Container>
-        <AmbientLight />
+    <svg viewBox={`0 0 ${width} ${height}`} style={{width:'100%', height:'100%', overflow:'visible'}}>
+      <defs>
+        <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#2997ff" stopOpacity="0.3"/>
+          <stop offset="1" stopColor="#2997ff" stopOpacity="0.05"/>
+        </linearGradient>
+      </defs>
+      
+      {/* 12년 (Gradual Rise Line) */}
+      <path d={existingPath} stroke="#ff9f0a" strokeWidth="4" fill="none" opacity="0.8"/>
+      <circle cx={endX} cy={height - 30} r="5" fill="#ff9f0a"/>
+      {/* 12년 라벨: 그래프 가려지지 않게 좌측 상단으로 이동 */}
+      <text x={width * 0.6} y={height - 50} fill="#ff9f0a" fontSize="26" fontWeight="700" textAnchor="middle">12년 (2.3TB)</text>
 
-        {/* 1. 상단: Grid Layout */}
-        <TopSection>
-          <TextGroup>
-            <MainTitle
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              PINN 프로젝트 <br />
-              <span>데이터 현황.</span>
-            </MainTitle>
-            <Description
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              실시간 데이터 수집 및 분석 현황입니다.<br/>
-              PINN 모델의 목표 달성 추이를 확인하세요.
-            </Description>
-          </TextGroup>
-
-          <BarChartContainer>
-            {MAIN_DATA.map((item, idx) => (
-              <BarRow key={item.id}>
-                <BarLabel
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 + idx*0.1 }}
-                >{item.label}</BarLabel>
-                
-                <BarTrack>
-                  <BarFill 
-                    $type={item.type}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${item.value}%` }}
-                    transition={{ duration: 1.2, delay: 0.4 + idx*0.1, ease: [0.16, 1, 0.3, 1] }}
-                  />
-                  {item.target && (
-                    <TargetLineTop 
-                      style={{ left: `${item.target}%` }}
-                      initial={{ height: 0 }} animate={{ height: "130%" }} transition={{ delay: 1.8 }}
-                    >
-                      <TargetLabelTop>
-                        🎯 목표: 24TB
-                      </TargetLabelTop>
-                    </TargetLineTop>
-                  )}
-                </BarTrack>
-
-                <BarValue 
-                    $isHero={item.type === "hero"}
-                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.5 + idx*0.1 }}
-                >
-                    <CountUp to={item.display} duration={2} delay={1.5} />
-                    <span style={{ fontSize: '0.6em', marginLeft: '4px', opacity: 0.7 }}>{item.unit}</span>
-                </BarValue>
-              </BarRow>
-            ))}
-          </BarChartContainer>
-        </TopSection>
-
-        {/* 2. 하단: 리얼타임 카운팅 + 달성률 표시 */}
-        <BottomSection>
-          {PROCESS_DATA.map((proc, idx) => (
-            <ProcessCard key={proc.id} data={proc} index={idx} />
-          ))}
-        </BottomSection>
-      </Container>
-    </>
+      {/* PoC (Flat then Surge) */}
+      <path d={rocketPath} stroke="#2997ff" strokeWidth="6" fill="none" strokeLinecap="round"/>
+      <path d={`${rocketPath} L ${endX},${height} L ${startX},${height} Z`} fill="url(#chartFill)"/>
+      
+      <circle cx={endX} cy={endY} r="8" fill="#2997ff" stroke="#fff" strokeWidth="2"/>
+      <text x={endX} y={endY - 20} fill="#2997ff" fontSize="28" fontWeight="800" textAnchor="end">PoC 4개월 (75.3TB)</text>
+    </svg>
   );
 }
 
-function ProcessCard({ data, index }: { data: any; index: number }) {
-  const width = 300; 
-  const height = 100;
-  const targetPath = useMemo(() => getPath(data.target, width, height), [data.target]);
-  const actualPath = useMemo(() => getPath(data.actual, width, height), [data.actual]);
-
-  // 로직 변경: 요청하신 대로 목표값은 고정하고, 차이를 계산
-  const excessVal = data.currentScore - data.goalScore;
+export default function PremiumDashboard() {
+  const orange = "#ff9f0a";
+  const blue = "#2997ff";
 
   return (
-    <Card
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.8 + index * 0.1 }}
-    >
-      <div>
-        <CardHeader>
-          <TitleGroup>
-            <ProcessTitle>{data.name}</ProcessTitle>
-            <ProcessUnit>{data.unit}</ProcessUnit>
-          </TitleGroup>
-        </CardHeader>
-        
-        <StatRow>
-          {/* 1. 메인 점수 */}
-          <MainScoreWrapper>
-            <MainScore $color={data.color}>
-                <CountUp to={data.currentScore} duration={2.5} delay={1 + index * 0.2} />
-            </MainScore>
-            <span style={{ fontSize: '1.4rem', fontWeight: 600, color: data.color }}>{data.scoreUnit}</span>
-          </MainScoreWrapper>
-          
-          {/* 2. 상세 지표 (목표, 초과) */}
-          <DetailStatsGrid>
-            <DetailStatBox>
-                <DetailLabel>목표</DetailLabel>
-                <DetailValue>
-                    {/* 목표값 자체를 표시 (예: 80) */}
-                    <CountUp to={data.goalScore} duration={2} delay={1.5} suffix={data.scoreUnit} />
-                </DetailValue>
-            </DetailStatBox>
-            <DetailStatBox>
-                <DetailLabel>초과 달성</DetailLabel>
-                <DetailValue $isPositive={excessVal > 0}>
-                  {excessVal > 0 ? "+" : ""}
-                  {/* 현재값 - 목표값 (예: 98 - 80 = 18) */}
-                  <CountUp to={excessVal} duration={2} delay={1.8} suffix={data.scoreUnit} />
-                </DetailValue>
-            </DetailStatBox>
-          </DetailStatsGrid>
+    <Container>
+      <GlobalStyle />
+      
+      <HeaderWrapper initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+        <MainTitle>신성델타테크 데이터 수집 현황</MainTitle>
+        <SubTitle>
+          지난 12년 대비 PoC 4개월간 <strong>34배</strong> 더 많이 수집했습니다.
+        </SubTitle>
+      </HeaderWrapper>
 
-        </StatRow>
-      </div>
+      <MainGrid>
+        {/* Top: Bar Charts */}
+        <BentoBox initial={{opacity:0}} animate={{opacity:1}}>
+          <BarContainer>
+            {/* Left: Existing */}
+            <BarColumn>
+              <ColumnHeader $color={orange}>기존 (12년 누적)</ColumnHeader>
+              {BAR_DATA.filter(d => d.type === 'existing').map((d) => (
+                <BarRow key={d.id}>
+                  <Label>{d.icon}{d.label}</Label>
+                  <Track>
+                    {/* 12년 데이터 시각적 보정 (최소값 보장 및 8배 증폭) */}
+                    <Fill 
+                      $color={orange} 
+                      initial={{width:0}} 
+                      animate={{width:`${Math.min(Math.max((d.value/MAX_VAL)*100 * 8, 5), 100)}%`}} 
+                      transition={{duration:1}}
+                    />
+                  </Track>
+                  <Value $color={orange}><CountUp to={d.value} suffix=" TB"/></Value>
+                </BarRow>
+              ))}
+            </BarColumn>
+            
+            {/* Right: PoC */}
+            <BarColumn style={{position: 'relative'}}>
+               <GoalLineContainer>
+                 <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <GoalLine />
+                    <GoalBadge>목표 24TB</GoalBadge>
+                 </div>
+               </GoalLineContainer>
 
-      <GraphArea>
-        <StyledSVG viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-          <line x1="0" y1={height} x2={width} y2={height} stroke="#ffffff" strokeWidth="1" opacity="0.1" />
-          
-          <motion.path
-            d={targetPath} fill="none" stroke="#ff453a" strokeWidth="2" strokeDasharray="4 3" opacity="0.6"
-            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, delay: 1.2 }}
-          />
-          <motion.path
-            d={actualPath} fill="none" stroke={data.color} strokeWidth="4" strokeLinecap="round" vectorEffect="non-scaling-stroke"
-            filter={`drop-shadow(0 0 8px ${data.color})`}
-            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.8, delay: 1.4 }}
-          />
-        </StyledSVG>
-      </GraphArea>
-    </Card>
+              <ColumnHeader $color={blue}>도입 후 (PoC 4개월)</ColumnHeader>
+              {BAR_DATA.filter(d => d.type === 'poc').map((d) => (
+                <BarRow key={d.id}>
+                  <Label>{d.icon}{d.label}</Label>
+                  <Track>
+                    {/* PoC 데이터 시각적 보정: 보정치 절반으로 축소 (8배 -> 4배) */}
+                    <Fill 
+                      $color={blue} 
+                      $isHero={d.isHero}
+                      initial={{width:0}} 
+                      animate={{width:`${Math.min(Math.max((d.value/MAX_VAL)*100 * (d.isHero ? 1 : 4), 5), 100)}%`}} 
+                      transition={{duration:1.5}}
+                    />
+                  </Track>
+                  <Value $color={blue} $isHero={d.isHero}><CountUp to={d.value} suffix=" TB"/></Value>
+                </BarRow>
+              ))}
+            </BarColumn>
+          </BarContainer>
+        </BentoBox>
+
+        {/* Bottom Section */}
+        <BottomGrid>
+          <BentoBox initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay:0.2}}>
+            <SectionTitle>누적 속도 시각화</SectionTitle>
+            <div style={{flex:1, width:'100%', display:'flex', alignItems:'flex-end', paddingBottom:'10px'}}>
+              <RocketChart />
+            </div>
+          </BentoBox>
+
+          <BentoBox initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay:0.3}}>
+            <SectionTitle>수집 체계 혁신</SectionTitle>
+            <div style={{display:'flex', flexDirection:'column', justifyContent:'center', height:'100%'}}>
+              <TableHeader>
+                <span>구분</span><span>기존 (AS-IS)</span><span>혁신 (TO-BE)</span>
+              </TableHeader>
+              {TABLE_DATA.map((row, i) => (
+                <TableRow key={i} initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.4+i*0.1}}>
+                  <span className="cat">{row.category}</span>
+                  <span className="asis">{row.asIs}</span>
+                  <span className="tobe">{row.toBe}</span>
+                </TableRow>
+              ))}
+            </div>
+          </BentoBox>
+        </BottomGrid>
+      </MainGrid>
+    </Container>
   );
 }

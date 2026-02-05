@@ -10,12 +10,13 @@ import CctvPlayer from "./cctv-player";
 
 const PageWrapper = styled.div`
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 64px);
   background: #051328;
   color: #e6edf7;
   font-family: "Pretendard";
   padding: 20px;
   box-sizing: border-box;
+  margin-top: 64px;
 `;
 
 const VideoGrid = styled.div`

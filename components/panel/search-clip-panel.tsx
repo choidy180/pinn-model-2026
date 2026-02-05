@@ -3,15 +3,15 @@
 import styled, { keyframes } from "styled-components";
 import { FiSearch } from "react-icons/fi";
 import { IoMdClose } from "react-icons/io";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation"; 
 
 /* =======================================
- * 데이터 타입 & 샘플 데이터
+ * 데이터 타입
  * ======================================= */
 
 type CameraInfo = {
-  id: string;
-  videoUrl: string;
+  videoUrl: string; 
   date: string;
   startTime: string;
   endTime: string;
@@ -23,50 +23,102 @@ type ProcessRow = {
   cameras: CameraInfo[];
 };
 
-const PROCESS_ROWS: ProcessRow[] = [
-  {
-    id: "p1",
-    label: "자재창고",
-    cameras: [
-      { id: "QSN00120", videoUrl: "/videos/selected/warehouse/warehouse_1.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00121", videoUrl: "/videos/selected/warehouse/warehouse_2.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-    ],
-  },
-  {
-    id: "p2",
-    label: "사출설비",
-    cameras: [
-      { id: "QSN00123", videoUrl: "/videos/selected/facilities/facilities_1.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00124", videoUrl: "/videos/selected/facilities/facilities_2.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00125", videoUrl: "/videos/selected/facilities/facilities_3.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00126", videoUrl: "/videos/selected/facilities/facilities_4.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-    ],
-  },
-  {
-    id: "p3",
-    label: "건조공정",
-    cameras: [
-      { id: "QSN00127", videoUrl: "/videos/selected/process/process_1.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00128", videoUrl: "/videos/selected/process/process_2.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00129", videoUrl: "/videos/selected/process/process_3.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-    ],
-  },
-  {
-    id: "p4",
-    label: "패킹, 조립",
-    cameras: [
-      { id: "QSN00130", videoUrl: "/videos/selected/pakking/pakking_1.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00131", videoUrl: "/videos/selected/pakking/pakking_2.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00132", videoUrl: "/videos/selected/pakking/pakking_3.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-      { id: "QSN00133", videoUrl: "/videos/selected/pakking/pakking_4.mp4", date: "250926", startTime: "16:19:22", endTime: "16:23:22" },
-    ],
-  },
-];
-
 type SelectedState = {
   process: ProcessRow;
   camera: CameraInfo;
 } | null;
+
+/* =======================================
+ * 비디오 데이터 설정 (ID별 분기)
+ * ======================================= */
+
+const API_BASE = "http://1.254.24.170:24828/api/DX_API000031?videoName=";
+const DEFAULT_DATE = "250926";
+const DEFAULT_TIME_START = "16:19:22";
+const DEFAULT_TIME_END = "16:23:22";
+
+// 헬퍼: 파일명 배열을 받아 CameraInfo 배열로 변환
+const createCameras = (filenames: string[]): CameraInfo[] => {
+  return filenames.map(name => ({
+    videoUrl: `${API_BASE}${name}`,
+    date: DEFAULT_DATE,
+    startTime: DEFAULT_TIME_START,
+    endTime: DEFAULT_TIME_END
+  }));
+};
+
+// ID 1: MJT63702706KSD5NE0286 데이터 셋
+const DATA_SET_MJT: ProcessRow[] = [
+  {
+    id: "p1",
+    label: "자재창고",
+    cameras: createCameras([
+      "warehouse0101.mp4", "warehouse0102.mp4", "warehouse0103.mp4", 
+      "warehouse0118.mp4", "warehouse0201.mp4", "warehouse0202.mp4"
+    ]),
+  },
+  {
+    id: "p2",
+    label: "사출설비",
+    cameras: createCameras([
+      "equip0111.mp4", "equip0113.mp4", "equip0114.mp4", 
+      "equip0120.mp4", "equip0211.mp4", "equip0213.mp4"
+    ]),
+  },
+  {
+    id: "p3",
+    label: "건조공정",
+    cameras: createCameras([
+      "dry0101.mp4", "dry0102.mp4", "dry_in01.mp4", 
+      "dry_out01.mp4", "dry0201.mp4", "dry0202.mp4"
+    ]),
+  },
+  {
+    id: "p4",
+    label: "패킹, 조립",
+    cameras: createCameras([
+      "assembly0101.mp4", "assembly0102.mp4", "assembly0201.mp4", 
+      "assembly0202.mp4", "assembly0301.mp4", "assembly0302.mp4"
+    ]),
+  },
+];
+
+// ID 2: AXR82930411LPT9QR1122 데이터 셋
+const DATA_SET_AXR: ProcessRow[] = [
+  {
+    id: "p1",
+    label: "자재창고",
+    cameras: createCameras([
+      "warehouse0203.mp4", "warehouse0218.mp4", "warehouse0301.mp4", 
+      "warehouse0302.mp4", "warehouse0303.mp4", "warehouse0318.mp4"
+    ]),
+  },
+  {
+    id: "p2",
+    label: "사출설비",
+    cameras: createCameras([
+      "equip0214.mp4", "equip0220.mp4", "equip0311.mp4", 
+      "equip0313.mp4", "equip0314.mp4", "equip0320.mp4"
+    ]),
+  },
+  {
+    id: "p3",
+    label: "건조공정",
+    cameras: createCameras([
+      "dry_in02.mp4", "dry_out02.mp4", "dry0301.mp4", 
+      "dry0302.mp4", "dry_in03.mp4", "dry_out03.mp4"
+    ]),
+  },
+  {
+    id: "p4",
+    label: "패킹, 조립",
+    cameras: createCameras([
+      "pack0101.mp4", "pack0102.mp4", "pack0201.mp4", 
+      "pack0202.mp4", "pack0301.mp4", "pack0402.mp4"
+    ]),
+  },
+];
+
 
 /* =======================================
  * [초고성능/안전장치 포함] 비디오 썸네일 컴포넌트
@@ -171,6 +223,19 @@ export default function SearchPanelCctv() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<SelectedState>(null);
 
+  // [수정] URL 파라미터 sn 값 가져오기
+  const searchParams = useSearchParams();
+  const currentSn = searchParams.get("sn") || "MJT63702706KSD5NE0286"; // 값이 없으면 기본값으로 첫번째 ID 사용
+
+  // [핵심] sn 값에 따라 보여줄 데이터 셋 결정 (useMemo로 최적화)
+  const currentProcessRows = useMemo(() => {
+    if (currentSn === "AXR82930411LPT9QR1122") {
+      return DATA_SET_AXR;
+    }
+    // 기본값 혹은 MJT... 일 경우
+    return DATA_SET_MJT;
+  }, [currentSn]);
+
   const handleThumbClick = (process: ProcessRow, camera: CameraInfo) => {
     setSelected({ process, camera });
   };
@@ -184,21 +249,21 @@ export default function SearchPanelCctv() {
           <FiSearch />
         </SearchIconWrapper>
         <SearchInput
-          placeholder="QSN00124"
+          placeholder=""
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </SearchBar>
 
       <RowsWrapper>
-        {PROCESS_ROWS.map((row) => (
+        {currentProcessRows.map((row) => (
           <ProcessCard key={row.id}>
             <ProcessLabel>{row.label}</ProcessLabel>
 
             <CamerasWrapper>
-              {row.cameras.map((cam) => (
+              {row.cameras.map((cam, idx) => (
                 <CameraThumb
-                  key={cam.id}
+                  key={`${row.id}-${idx}`}
                   onClick={() => handleThumbClick(row, cam)}
                 >
                   <VideoThumbnail src={cam.videoUrl} />
@@ -228,7 +293,7 @@ export default function SearchPanelCctv() {
                 <StyledModalVideo 
                   src={selected.camera.videoUrl} 
                   controls 
-                  controlsList="nofullscreen" /* [핵심] 전체화면 버튼 비활성화 속성 */
+                  controlsList="nofullscreen"
                   autoPlay 
                   muted 
                   playsInline
@@ -237,7 +302,8 @@ export default function SearchPanelCctv() {
                 {/* 오버레이 UI */}
                 <StatusOverlay>
                   <RecDot />
-                  <span>ID [ {selected.camera.id} ] Physical AI Vision Analysis : Active</span>
+                  {/* 현재 페이지 파라미터(sn) 값을 ID로 표시 */}
+                  <span>ID [ {currentSn} ] Physical AI Vision Analysis : Active</span>
                 </StatusOverlay>
               </VideoWrapper>
             </ModalBody>
@@ -250,7 +316,7 @@ export default function SearchPanelCctv() {
 
 
 /* =======================================
- * 스타일
+ * 스타일 (변경 없음)
  * ======================================= */
 
 const PageWrapper = styled.div`
@@ -348,7 +414,6 @@ const VideoWrapper = styled.div`
 const StyledModalVideo = styled.video`
   width: 100%; height: 100%; object-fit: contain; display: block; outline: none;
   
-  /* [핵심] Webkit 브라우저(크롬 등)에서 전체화면 버튼 강제 숨김 */
   &::-webkit-media-controls-fullscreen-button {
     display: none !important;
   }
@@ -370,13 +435,12 @@ const RecDot = styled.div`
 const StatusOverlay = styled.div`
   position: absolute;
   
-  /* 위치 및 크기는 이전 요청사항 유지 */
   bottom: 55px; 
   left: 50%; transform: translateX(-50%);
   
   display: flex; align-items: center; justify-content: center; gap: 12px;
   
-  min-width: 500px; 
+  min-width: 700px; 
   padding: 16px 30px;
   
   border-radius: 6px;
